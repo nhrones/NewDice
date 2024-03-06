@@ -1,4 +1,4 @@
-# DWM_GUI Dice Game
+# Surface GUI Dice Game
 
 Yes it's my same old poker-dice game you've all seen on many platforms.    
 Now, its on my Surface framework, writen in pure deno typescript!
