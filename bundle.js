@@ -1249,6 +1249,26 @@ var selectBuf;
 var woohooBuf;
 var loaded = false;
 
+// src/ViewModels/highScore.ts
+var HighScore = 0;
+function setupHighScore() {
+  HighScore = parseInt(localStorage.getItem("highScore")) ?? 0;
+  if (!HighScore)
+    localStorage.setItem("highScore", "10");
+  events.fire(
+    "UpdateText",
+    "highScoreValue",
+    {
+      border: false,
+      fill: true,
+      fillColor: "snow",
+      fontColor: "black",
+      text: HighScore + ""
+    }
+  );
+}
+__name(setupHighScore, "setupHighScore");
+
 // src/ViewModels/playerName.ts
 var id = "player1";
 var state = {
@@ -1854,23 +1874,7 @@ var App = class {
     this.clearPossibleScores();
     this.setLeftScores();
     this.setRightScores();
-    this.setupHighScore();
-  }
-  setupHighScore() {
-    const highScore = localStorage.getItem("highScore") ?? 0;
-    if (!highScore)
-      localStorage.setItem("highScore", "10");
-    events.fire(
-      "UpdateText",
-      "highScoreValue",
-      {
-        border: false,
-        fill: true,
-        fillColor: "snow",
-        fontColor: "black",
-        text: highScore
-      }
-    );
+    setupHighScore();
   }
   /** resets game state to start a new game */
   resetGame() {
@@ -1899,6 +1903,7 @@ var App = class {
         text: "^ total = 0"
       }
     );
+    setupHighScore();
     state2.color = "brown";
     state2.text = "Roll Dice";
     state2.enabled = true;
@@ -1920,9 +1925,7 @@ var App = class {
       fontColor: "black",
       text: winMsg[0] + " " + thisPlayer.score
     });
-    const highScore = parseInt(localStorage.getItem("highScore")) ?? 0;
-    console.log("highScore = ", highScore);
-    if (thisPlayer.score > highScore) {
+    if (thisPlayer.score > HighScore) {
       console.log("setting high score to ", thisPlayer.score);
       localStorage.setItem("highScore", JSON.stringify(thisPlayer.score));
       winMsg.push("You set a new high score!");
