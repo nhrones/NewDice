@@ -1858,6 +1858,8 @@ var App = class {
   }
   setupHighScore() {
     const highScore = localStorage.getItem("highScore") ?? 0;
+    if (!highScore)
+      localStorage.setItem("highScore", "10");
     events.fire(
       "UpdateText",
       "highScoreValue",
