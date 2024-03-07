@@ -1067,6 +1067,7 @@ function handleMouseMove(evt) {
       node.hovered = true;
       node.update();
       hoveredNode = node;
+      document.documentElement.style.cursor = "hand";
     }
   } else {
     if (hoveredNode !== null) {
@@ -1106,6 +1107,7 @@ function clearFocused() {
 }
 __name(clearFocused, "clearFocused");
 function clearHovered() {
+  document.documentElement.style.cursor = "arrow";
   if (hoveredNode !== null) {
     hoveredNode.hovered = false;
     hoveredNode.update();
@@ -1781,20 +1783,16 @@ var App = class {
     /** add a score value for this player */
     this.addScore = (value) => {
       thisPlayer.score += value;
-      const text = thisPlayer.score === 0 ? thisPlayer.playerName : `${thisPlayer.playerName} = ${thisPlayer.score}`;
+      const text = thisPlayer.score + "";
       this.updatePlayer(thisPlayer.idx, thisPlayer.color, text);
     };
     /** broadcast an update message to the view element */
     this.updatePlayer = (index, color, text) => {
-      eventBus.fire(
-        "UpdatePlayer",
-        index.toString(),
-        {
-          index,
-          color,
-          text
-        }
-      );
+      eventBus.fire("UpdatePlayer", index.toString(), {
+        index,
+        color,
+        text
+      });
     };
     this.scoreItems = [];
     this.leftBonus = 0;
@@ -1833,10 +1831,6 @@ var App = class {
       appInstance = App._instance;
     }
   }
-  /** check score total and determin the winner of this game */
-  getWinner() {
-    return thisPlayer;
-  }
   /** clear all scoreElements possible score value */
   clearPossibleScores() {
     for (const scoreItem of this.scoreItems) {
@@ -1860,6 +1854,21 @@ var App = class {
     this.clearPossibleScores();
     this.setLeftScores();
     this.setRightScores();
+    this.setupHighScore();
+  }
+  setupHighScore() {
+    const highScore = localStorage.getItem("highScore") ?? 0;
+    events.fire(
+      "UpdateText",
+      "highScoreValue",
+      {
+        border: false,
+        fill: true,
+        fillColor: "snow",
+        fontColor: "black",
+        text: highScore
+      }
+    );
   }
   /** resets game state to start a new game */
   resetGame() {
@@ -1868,15 +1877,11 @@ var App = class {
     for (const scoreItem of this.scoreItems) {
       scoreItem.reset();
     }
-    eventBus.fire(
-      "UpdatePlayer",
-      "1",
-      {
-        index: 0,
-        color: "brown",
-        text: ""
-      }
-    );
+    eventBus.fire("UpdatePlayer", "1", {
+      index: 0,
+      color: "brown",
+      text: ""
+    });
     this.leftBonus = 0;
     this.fiveOkindBonus = 0;
     this.leftTotal = 0;
@@ -1899,26 +1904,28 @@ var App = class {
   }
   /** show a popup with final score */
   showFinalScore() {
-    let winMsg;
-    winMsg = thisPlayer.playerName + " wins!";
+    const winMsg = [];
     Woohoo();
-    winMsg = "You won!";
+    winMsg.push("You won!");
     state2.color = "black";
-    state2.text = winMsg;
+    state2.text = winMsg[0];
     update2();
     this.updatePlayer(0, "snow", "");
-    events.fire(
-      `UpdateText`,
-      "infolabel",
-      {
-        border: false,
-        fill: true,
-        fillColor: "snow",
-        fontColor: "black",
-        text: winMsg + " " + thisPlayer.score
-      }
-    );
-    events.fire("ShowPopup", "", { title: "Game Over!", msg: "You Won!" });
+    events.fire(`UpdateText`, "infolabel", {
+      border: false,
+      fill: true,
+      fillColor: "snow",
+      fontColor: "black",
+      text: winMsg[0] + " " + thisPlayer.score
+    });
+    const highScore = parseInt(localStorage.getItem("highScore")) ?? 0;
+    console.log("highScore = ", highScore);
+    if (thisPlayer.score > highScore) {
+      console.log("setting high score to ", thisPlayer.score);
+      localStorage.setItem("highScore", JSON.stringify(thisPlayer.score));
+      winMsg.push("You set a new high score!");
+    }
+    events.fire("ShowPopup", "", { title: "Game Over!", msg: winMsg });
   }
   /** check all scoreElements to see if game is complete */
   isGameComplete() {
@@ -1944,7 +1951,7 @@ var App = class {
       if (val > 0) {
         this.leftTotal += val;
         thisPlayer.score += val;
-        const text = thisPlayer.score === 0 ? thisPlayer.playerName : `${thisPlayer.playerName} = ${thisPlayer.score}`;
+        const text = thisPlayer.score + "";
         this.updatePlayer(thisPlayer.idx, thisPlayer.color, text);
         if (this.scoreItems[i].hasFiveOfaKind && fiveOfaKindCount > 1) {
           this.addScore(100);
@@ -2042,12 +2049,24 @@ var cfg = {
   nodes: [
     {
       kind: "Text",
-      id: "player1",
+      id: "ScoreLabel",
       idx: 1,
       tabOrder: 0,
       location: { left: 5, top: 20 },
       size: { width: 100, height: 25 },
-      text: "Score:",
+      text: "This Score",
+      fontColor: "brown",
+      hasBoarder: false,
+      bind: true
+    },
+    {
+      kind: "Text",
+      id: "player1",
+      idx: 1,
+      tabOrder: 0,
+      location: { left: 10, top: 40 },
+      size: { width: 100, height: 25 },
+      text: "0",
       fontColor: "brown",
       hasBoarder: false,
       bind: true
@@ -2058,11 +2077,31 @@ var cfg = {
       idx: 0,
       tabOrder: 1,
       location: { left: 120, top: 20 },
-      //left 145
       size: { width: 150, height: 50 },
       boarderWidth: 5,
       radius: 10,
       text: "Roll Dice"
+    },
+    {
+      kind: "Text",
+      id: "highScore",
+      idx: -1,
+      tabOrder: 0,
+      location: { left: 280, top: 20 },
+      size: { width: 100, height: 25 },
+      text: "High Score",
+      bind: true
+    },
+    {
+      kind: "Text",
+      id: "highScoreValue",
+      idx: -1,
+      tabOrder: 0,
+      location: { left: 280, top: 40 },
+      size: { width: 80, height: 25 },
+      text: "250",
+      hasBoarder: false,
+      bind: true
     },
     {
       kind: "Die",
@@ -2315,13 +2354,13 @@ function drawDieFace(ctx2) {
 }
 __name(drawDieFace, "drawDieFace");
 function drawGlare(ctx2) {
-  let offset = 5;
-  let bottomLeftX = offset;
-  let bottomLeftY = size - offset;
-  let bottomRightX = size - offset;
-  let bottomRightY = size - offset;
-  let quarter = size * 0.25;
-  let threeQuarter = quarter * 3;
+  const offset = 5;
+  const bottomLeftX = offset;
+  const bottomLeftY = size - offset;
+  const bottomRightX = size - offset;
+  const bottomRightY = size - offset;
+  const quarter = size * 0.25;
+  const threeQuarter = quarter * 3;
   ctx2.fillStyle = "rgba(200, 200, 200, 0.4)";
   ctx2.beginPath();
   ctx2.moveTo(bottomLeftX, bottomLeftY);
@@ -2333,15 +2372,15 @@ function drawGlare(ctx2) {
 }
 __name(drawGlare, "drawGlare");
 function drawDots(ctx2, dieValue) {
-  let quarter = size / 4;
-  let center = quarter * 2;
-  let middle = quarter * 2;
-  let left4 = quarter;
-  let top3 = quarter;
-  let right = quarter * 3;
-  let bottom = quarter * 3;
-  let dotSize = size / 12;
-  let doDot = drawDot;
+  const quarter = size / 4;
+  const center = quarter * 2;
+  const middle = quarter * 2;
+  const left4 = quarter;
+  const top3 = quarter;
+  const right = quarter * 3;
+  const bottom = quarter * 3;
+  const dotSize = size / 12;
+  const doDot = drawDot;
   if (dieValue === 1) {
     doDot(ctx2, middle, center, dotSize);
   } else if (dieValue === 2) {
@@ -2488,7 +2527,7 @@ var Popup2 = class {
     this.hovered = false;
     this.focused = false;
     this.color = "black";
-    this.text = "";
+    this.text = [""];
     this.title = "";
     this.textAlign = "center";
     this.visible = true;
@@ -2518,8 +2557,8 @@ var Popup2 = class {
   /** show the virtual Popup view */
   show(data) {
     events.fire("FocusPopup", " ", this);
-    this.text = data.msg;
     this.title = data.title;
+    this.text = data.msg;
     left3 = this.location.left;
     top2 = this.location.top;
     this.path = this.shownPath;
@@ -2580,7 +2619,10 @@ var Popup2 = class {
     ctx.font = `${this.fontSize}px Tahoma, Verdana, sans-serif`;
     ctx.textAlign = this.textAlign;
     ctx.strokeText(this.title + " ", left3 + 175, top2 + 100);
-    ctx.strokeText(this.text + " ", left3 + 175, top2 + 175);
+    let txtTop = top2 + 100;
+    this.text.forEach((str) => {
+      ctx.strokeText(str + " ", left3 + 175, txtTop += 50);
+    });
     ctx.restore();
     this.visible = true;
   }
@@ -2836,7 +2878,6 @@ var context2 = new AudioContext();
 init(context2);
 var can = document.getElementById("surface");
 containerInit(
-  // REQUIRED - must be first call in main.ts
   can,
   cfg,
   view_manifest_default
