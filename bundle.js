@@ -2,15 +2,17 @@
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 var __export = (target, all) => {
-  for (var name2 in all)
-    __defProp(target, name2, { get: all[name2], enumerable: true });
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
 };
 
 // https://raw.githubusercontent.com/nhrones/Surface/main/Components/ViewModels/closeButton.ts
 var thisID;
-var initCloseButton = /* @__PURE__ */ __name((id3) => {
-  thisID = id3;
-  events.on("ButtonTouched", thisID, () => {
+var initCloseButton = /* @__PURE__ */ __name((id2) => {
+  thisID = id2;
+  signals.on("ButtonTouched", thisID, () => {
+    console.log("window.close");
+    self.close();
   });
 }, "initCloseButton");
 
@@ -75,7 +77,7 @@ var Text = class {
     this.hasBorder = el.hasBoarder ?? false;
     this.calculateMetrics();
     if (el.bind) {
-      events.on(
+      signals.on(
         "UpdateText",
         this.name,
         (data) => {
@@ -182,12 +184,10 @@ var Button = class {
     this.zOrder = 0;
     this.tabOrder = el.tabOrder || 0;
     this.location = el.location;
-    const { left: left4, top: top3 } = el.location;
     this.boarderWidth = el.boarderWidth || 1;
     this.size = el.size || { width: 50, height: 30 };
-    const { width, height } = this.size;
     this.enabled = true;
-    this.path = this.buildPath(el.radius || 0);
+    this.path = this.buildPath(el.radius || 10);
     this.textNode = new Text(
       {
         kind: "Text",
@@ -195,8 +195,9 @@ var Button = class {
         tabOrder: 0,
         id: this.name + "Label",
         text: el.text || "",
-        location: this.location,
-        size: this.size,
+        location: { left: this.location.left + 10, top: this.location.top + 10 },
+        size: { width: this.size.width - 20, height: this.size.height - 20 },
+        //this.size,
         fontSize: el.fontSize || 18,
         bind: true
       }
@@ -205,7 +206,7 @@ var Button = class {
     this.fontColor = el.fontColor || "white";
     this.text = el.text || "??";
     this.render();
-    events.on(
+    signals.on(
       "UpdateButton",
       this.name,
       (data) => {
@@ -235,9 +236,8 @@ var Button = class {
    * fires an event on the eventBus to inform VMs 
    */
   touched() {
-    console.log("Button " + this.name + " touched!");
     if (this.enabled) {
-      events.fire("ButtonTouched", this.name, null);
+      signals.fire("ButtonTouched", this.name, null);
     }
   }
   /** 
@@ -390,10 +390,10 @@ var Container = class {
       this.height
     );
     this.scrollBar = new Scrollbar(this);
-    events.on("Scroll", "", (evt) => {
+    signals.on("Scroll", "", (evt) => {
       this.scrollBar.scroll(evt.deltaY);
     });
-    events.on("TextMetrics", this.name, (data) => {
+    signals.on("TextMetrics", this.name, (data) => {
       this.textCapacity = data.capacity.columns - 1;
       this.rowCapacity = data.capacity.rows;
     });
@@ -470,10 +470,10 @@ var Popup = class {
         bind: true
       }
     );
-    events.on("ShowPopup", "", (data) => {
+    signals.on("ShowPopup", "", (data) => {
       this.show(data.msg);
     });
-    events.on("HidePopup", "", () => this.hide());
+    signals.on("HidePopup", "", () => this.hide());
   }
   /** build a Path2D */
   buildPath(radius) {
@@ -483,7 +483,7 @@ var Popup = class {
   }
   /** show the virtual Popup view */
   show(msg) {
-    events.fire("FocusPopup", " ", this);
+    signals.fire("FocusPopup", " ", this);
     this.text = msg;
     left = this.location.left;
     top = this.location.top;
@@ -505,7 +505,7 @@ var Popup = class {
   /** called from Surface/canvasEvents when this element has been touched */
   touched() {
     this.hide();
-    events.fire("PopupReset", "", null);
+    signals.fire("PopupReset", "", null);
   }
   /** update this virtual Popups view (render it) */
   update() {
@@ -591,7 +591,7 @@ var TextArea = class extends Container {
       this.size.width,
       this.size.height
     );
-    events.fire(
+    signals.fire(
       "TextMetrics",
       this.name,
       {
@@ -599,7 +599,7 @@ var TextArea = class extends Container {
         capacity: { rows: this.rowCapacity, columns: this.textCapacity }
       }
     );
-    events.on("UpdateTextArea", this.name, (data) => {
+    signals.on("UpdateTextArea", this.name, (data) => {
       const {
         _reason,
         text,
@@ -643,7 +643,7 @@ var TextArea = class extends Container {
     return this.size.width - ctx.measureText(this.text).width;
   }
   touched() {
-    events.fire("TextViewTouched", this.name, null);
+    signals.fire("TextViewTouched", this.name, null);
   }
   update() {
     this.render();
@@ -759,7 +759,7 @@ var CheckBox = class {
     this.text = el.text || "??";
     this.fontSize = el.fontSize || 24;
     this.render();
-    events.on(
+    signals.on(
       "UpdateCheckBox",
       this.name,
       (data) => {
@@ -790,7 +790,7 @@ var CheckBox = class {
    */
   touched() {
     if (this.enabled) {
-      events.fire("CheckBoxTouched", this.name, { checked: this.enabled });
+      signals.fire("CheckBoxTouched", this.name, { checked: this.enabled });
     }
   }
   /** 
@@ -858,24 +858,24 @@ var initCFG = /* @__PURE__ */ __name((theCanvas, cfg2, applicationManifest) => {
 var getFactories = /* @__PURE__ */ __name(() => {
   const baseUrl = new URL("./", appManifest.baseUrl).href;
   const factories2 = /* @__PURE__ */ new Map();
-  for (const [self, module] of Object.entries(base_manifest_default.Views)) {
-    const url = new URL(self, baseUrl).href;
+  for (const [self2, module] of Object.entries(base_manifest_default.Views)) {
+    const url = new URL(self2, baseUrl).href;
     const path = url.substring(baseUrl.length).substring("Views".length);
     const baseRoute = path.substring(1, path.length - 3);
-    const name2 = sanitizeName(baseRoute);
-    const id3 = name2.toLowerCase();
-    const newView = { id: id3, name: name2, url, component: module.default };
-    factories2.set(id3, newView);
+    const name = sanitizeName(baseRoute);
+    const id2 = name.toLowerCase();
+    const newView = { id: id2, name, url, component: module.default };
+    factories2.set(id2, newView);
   }
   if (appManifest.Views) {
-    for (const [self, module] of Object.entries(appManifest.Views)) {
-      const url = new URL(self, baseUrl).href;
+    for (const [self2, module] of Object.entries(appManifest.Views)) {
+      const url = new URL(self2, baseUrl).href;
       const path = url.substring(baseUrl.length).substring("Views".length);
       const baseRoute = path.substring(1, path.length - 3);
-      const name2 = sanitizeName(baseRoute);
-      const id3 = name2.toLowerCase();
-      const newView = { id: id3, name: name2, url, component: module.default };
-      factories2.set(id3, newView);
+      const name = sanitizeName(baseRoute);
+      const id2 = name.toLowerCase();
+      const newView = { id: id2, name, url, component: module.default };
+      factories2.set(id2, newView);
     }
   }
   return factories2;
@@ -908,25 +908,25 @@ function toPascalCase(text) {
   );
 }
 __name(toPascalCase, "toPascalCase");
-function sanitizeName(name2) {
-  const fileName = name2.replace("/", "");
+function sanitizeName(name) {
+  const fileName = name.replace("/", "");
   return toPascalCase(fileName);
 }
 __name(sanitizeName, "sanitizeName");
 
-// https://raw.githubusercontent.com/nhrones/Surface/main/Framework/src/coms/eventBus.ts
-function buildEventBus() {
+// https://raw.githubusercontent.com/nhrones/Surface/main/Framework/src/events/signalBroker.ts
+function buildSignalBroker() {
   const eventHandlers = /* @__PURE__ */ new Map();
-  const newEventBus = {
+  const newSignalBroker = {
     /** 
-     * on - registers a handler function to be executed when an event is sent
+     * on - registers a handler function to be executed when a signal is sent
      *  
-     * @param {T} eventName - event name (one of `TypedEvents` only)!
+     * @param {T} signalName - signal name (one of `TypedEvents` only)!
      * @param {string} id - id of a target element (may be an empty string)
-     * @param {Handler} handler - event handler callback function
+     * @param {Handler} handler - eventhandler callback function
      */
-    on(eventName, id3, handler) {
-      const keyName = eventName + "-" + id3;
+    on(signalName, id2, handler) {
+      const keyName = signalName + "-" + id2;
       if (eventHandlers.has(keyName)) {
         const handlers = eventHandlers.get(keyName);
         handlers.push(handler);
@@ -935,13 +935,13 @@ function buildEventBus() {
       }
     },
     /** 
-     * execute all registered handlers for a named event
-     * @param {key} eventName - event name - one of `TypedEvents` only!
+     * execute all registered handlers for a named signal
+     * @param {key} signalName - signal name - one of `TypedEvents` only!
      * @param {string} id - id of a target element (may be an empty string)
-     * @param {TypedEvents[key]} data - data payload, typed for this category of event
+     * @param {TypedEvents[key]} data - data payload, typed for this category of signal
      */
-    fire(eventName, id3, data) {
-      const keyName = eventName + "-" + id3;
+    fire(signalName, id2, data) {
+      const keyName = signalName + "-" + id2;
       const handlers = eventHandlers.get(keyName);
       if (handlers) {
         for (const handler of handlers) {
@@ -950,16 +950,16 @@ function buildEventBus() {
       }
     }
   };
-  return newEventBus;
+  return newSignalBroker;
 }
-__name(buildEventBus, "buildEventBus");
-var events = buildEventBus();
+__name(buildSignalBroker, "buildSignalBroker");
+var signals = buildSignalBroker();
 
 // https://raw.githubusercontent.com/nhrones/Surface/main/Framework/src/render/activeNodes.ts
 var activeNodes = /* @__PURE__ */ new Set();
 var addNode = /* @__PURE__ */ __name((view) => {
   activeNodes.add(view);
-  events.fire(
+  signals.fire(
     "AddedView",
     "",
     {
@@ -987,7 +987,7 @@ var renderNodes = /* @__PURE__ */ __name(() => {
   }
 }, "renderNodes");
 
-// https://raw.githubusercontent.com/nhrones/Surface/main/Framework/src/coms/systemEvents.ts
+// https://raw.githubusercontent.com/nhrones/Surface/main/Framework/src/events/systemEvents.ts
 var left2 = 0;
 var x = 0;
 var y = 0;
@@ -999,7 +999,7 @@ var focusedNode = null;
 function initHostEvents() {
   addEventListener("input", (evt) => {
     if (focusedNode !== null) {
-      events.fire("WindowInput", focusedNode.name, evt);
+      signals.fire("WindowInput", focusedNode.name, evt);
     }
   });
   addEventListener("keydown", (evt) => {
@@ -1019,13 +1019,13 @@ function initHostEvents() {
     }
     if (evt.code === "Enter") {
       if (hasVisiblePopup === true) {
-        events.fire(`PopupReset`, "", null);
+        signals.fire(`PopupReset`, "", null);
       } else if (focusedNode !== null) {
         focusedNode.touched();
       }
     }
     if (focusedNode !== null) {
-      events.fire("WindowKeyDown", focusedNode.name, evt);
+      signals.fire("WindowKeyDown", focusedNode.name, evt);
     }
   });
   addEventListener("mousedown", (evt) => {
@@ -1034,7 +1034,7 @@ function initHostEvents() {
       if (hasVisiblePopup === false) {
         handleClickOrTouch(evt.pageX, evt.pageY);
       } else {
-        events.fire(`PopupReset`, "", null);
+        signals.fire(`PopupReset`, "", null);
       }
     }
   }, false);
@@ -1047,7 +1047,7 @@ function initHostEvents() {
   addEventListener("scroll", (evt) => {
     evt.preventDefault();
     const y2 = Math.sign(evt.scrollY);
-    events.fire("Scroll", "", { deltaY: y2 });
+    signals.fire("Scroll", "", { deltaY: y2 });
   });
 }
 __name(initHostEvents, "initHostEvents");
@@ -1088,7 +1088,7 @@ function handleClickOrTouch(mX, mY) {
         clearFocused();
         focusedNode = node2;
         if (focusedNode)
-          events.fire("Focused", focusedNode.name, true);
+          signals.fire("Focused", focusedNode.name, true);
         hit = true;
       }
     }
@@ -1101,7 +1101,7 @@ function clearFocused() {
   if (focusedNode !== null) {
     focusedNode.focused = false;
     focusedNode.hovered = false;
-    events.fire("Focused", focusedNode.name, focusedNode.focused);
+    signals.fire("Focused", focusedNode.name, focusedNode.focused);
     focusedNode.update();
   }
 }
@@ -1126,7 +1126,7 @@ function focusNext(target, _shift) {
           focusedNode.focused = true;
           focusedNode.hovered = true;
           focusedNode.update();
-          events.fire("Focused", focusedNode.name, true);
+          signals.fire("Focused", focusedNode.name, true);
         }
         hit = true;
       }
@@ -1255,7 +1255,7 @@ function setupHighScore() {
   HighScore = parseInt(localStorage.getItem("highScore")) ?? 0;
   if (!HighScore)
     localStorage.setItem("highScore", "10");
-  events.fire(
+  signals.fire(
     "UpdateText",
     "highScoreValue",
     {
@@ -1279,14 +1279,14 @@ var state = {
   text: "Score:"
 };
 var init2 = /* @__PURE__ */ __name(() => {
-  eventBus.on("UpdatePlayer", "0", (data) => {
+  on("UpdatePlayer", "0", (data) => {
     state.text = data.text;
     update();
   });
   update();
 }, "init");
 var update = /* @__PURE__ */ __name(() => {
-  events.fire("UpdateText", id, state);
+  signals.fire("UpdateText", id, state);
 }, "update");
 
 // src/ViewModels/diceEvaluator.ts
@@ -1411,7 +1411,7 @@ var setfiveOfaKindCount = /* @__PURE__ */ __name((val) => {
   fiveOfaKindCount = val;
 }, "setfiveOfaKindCount");
 var init3 = /* @__PURE__ */ __name(() => {
-  eventBus.on(`DieTouched`, "", (data) => {
+  on(`DieTouched`, "", (data) => {
     const { index } = data;
     const thisDie = die[index];
     if (thisDie.value > 0) {
@@ -1459,7 +1459,7 @@ var roll = /* @__PURE__ */ __name((dieValues) => {
   appInstance.evaluatePossibleScores();
 }, "roll");
 var updateView = /* @__PURE__ */ __name((index, value, frozen) => {
-  eventBus.fire("UpdateDie", index.toString(), { index, value, frozen });
+  fire("UpdateDie", index.toString(), { index, value, frozen });
 }, "updateView");
 var toString = /* @__PURE__ */ __name(() => {
   let str = "[";
@@ -1480,31 +1480,31 @@ var House = 10;
 var FiveOfaKind = 11;
 var Chance = 12;
 var FiveOfaKindIndex = FiveOfaKind;
-var evaluate = /* @__PURE__ */ __name((id3) => {
-  return id3 < 6 ? evaluateNumbers(id3) : evaluateCommon(id3);
+var evaluate = /* @__PURE__ */ __name((id2) => {
+  return id2 < 6 ? evaluateNumbers(id2) : evaluateCommon(id2);
 }, "evaluate");
-var evaluateCommon = /* @__PURE__ */ __name((id3) => {
-  if (id3 === FiveOfaKind) {
+var evaluateCommon = /* @__PURE__ */ __name((id2) => {
+  if (id2 === FiveOfaKind) {
     return hasFiveOfaKind ? 50 : 0;
-  } else if (id3 === SmallStraight) {
+  } else if (id2 === SmallStraight) {
     return hasSmallStr ? 30 : 0;
-  } else if (id3 === LargeStraight) {
+  } else if (id2 === LargeStraight) {
     return hasLargeStr ? 40 : 0;
-  } else if (id3 === House) {
+  } else if (id2 === House) {
     return hasFullHouse ? 25 : 0;
-  } else if (id3 === FourOfaKind) {
+  } else if (id2 === FourOfaKind) {
     return hasQuads || hasFiveOfaKind ? sumOfAllDie : 0;
-  } else if (id3 === ThreeOfaKind) {
+  } else if (id2 === ThreeOfaKind) {
     return hasTrips || hasQuads || hasFiveOfaKind ? sumOfAllDie : 0;
-  } else if (id3 === Chance) {
+  } else if (id2 === Chance) {
     return sumOfAllDie;
   } else {
     return 0;
   }
 }, "evaluateCommon");
-var evaluateNumbers = /* @__PURE__ */ __name((id3) => {
+var evaluateNumbers = /* @__PURE__ */ __name((id2) => {
   let hits = 0;
-  const target = id3 + 1;
+  const target = id2 + 1;
   for (let i = 0; i < 5; i++) {
     const val = die[i].value;
     if (val === target) {
@@ -1532,23 +1532,23 @@ var ScoreElement = class {
    * @param index {number} index of this instance
    * @param name {string} the name of this instance
    */
-  constructor(index, name2) {
+  constructor(index, name) {
     this.owner = null;
     this.scoringDiesetSum = 0;
     this.hasFiveOfaKind = false;
     this.available = false;
     this.owned = false;
     this.index = index;
-    this.name = name2;
+    this.name = name;
     this.finalValue = 0;
     this.possibleValue = 0;
     this.scoringDieset = [0, 0, 0, 0, 0];
-    eventBus.on("ScoreButtonTouched", this.index.toString(), (_index) => {
+    on("ScoreButtonTouched", this.index.toString(), (_index) => {
       if (this.clicked()) {
-        eventBus.fire(`ScoreElementResetTurn`, "", null);
+        fire(`ScoreElementResetTurn`, "", null);
       }
     });
-    eventBus.on(`UpdateTooltip`, this.index.toString(), (data) => {
+    on(`UpdateTooltip`, this.index.toString(), (data) => {
       let msg = "";
       let thisState = LabelState.Normal;
       if (data.hovered) {
@@ -1563,7 +1563,7 @@ var ScoreElement = class {
         thisState = LabelState.Reset;
         msg = "";
       }
-      events.fire(
+      signals.fire(
         `UpdateText`,
         "infolabel",
         {
@@ -1578,7 +1578,7 @@ var ScoreElement = class {
   }
   /** broadcasts a message used to update the bottom infolabel element */
   updateInfo(text) {
-    events.fire(
+    signals.fire(
       `UpdateText`,
       "infolabel",
       {
@@ -1601,9 +1601,9 @@ var ScoreElement = class {
       this.updateScoreElement(black, emptyString);
     }
   }
-  /** fires event used to update the score value */
+  /** fires signal used to update the score value */
   renderValue(value) {
-    eventBus.fire(
+    fire(
       `UpdateScoreElement`,
       this.index.toString(),
       {
@@ -1617,7 +1617,7 @@ var ScoreElement = class {
   }
   /**  broadcasts a message used to update the score view element */
   updateScoreElement(color, value) {
-    eventBus.fire(
+    fire(
       `UpdateScoreElement`,
       this.index.toString(),
       {
@@ -1644,7 +1644,7 @@ var ScoreElement = class {
       this.renderValue(this.possibleValue.toString());
     }
   }
-  /** the clicked event handler for this scoreElement.    
+  /** the clicked signal handler for this scoreElement.    
    * returns true if the click caused this score to be    
    * taken by the current player  */
   clicked() {
@@ -1767,7 +1767,7 @@ __name(ScoreElement, "ScoreElement");
 var thisID2 = "rollbutton";
 var state2 = { text: "", color: "", enabled: true };
 var init4 = /* @__PURE__ */ __name(() => {
-  events.on("ButtonTouched", thisID2, () => {
+  signals.on("ButtonTouched", thisID2, () => {
     roll(null);
     updateRollState();
   });
@@ -1791,7 +1791,7 @@ var updateRollState = /* @__PURE__ */ __name(() => {
   update2();
 }, "updateRollState");
 var update2 = /* @__PURE__ */ __name(() => {
-  events.fire("UpdateButton", thisID2, state2);
+  signals.fire("UpdateButton", thisID2, state2);
 }, "update");
 
 // src/ViewModels/diceGame.ts
@@ -1808,7 +1808,7 @@ var App = class {
     };
     /** broadcast an update message to the view element */
     this.updatePlayer = (index, color, text) => {
-      eventBus.fire("UpdatePlayer", index.toString(), {
+      fire("UpdatePlayer", index.toString(), {
         index,
         color,
         text
@@ -1825,10 +1825,10 @@ var App = class {
     if (!this.isGameComplete()) {
       this.resetTurn();
     }
-    events.on(`PopupReset`, "", () => {
+    signals.on(`PopupReset`, "", () => {
       this.resetGame();
     });
-    eventBus.on(`ScoreElementResetTurn`, "", () => {
+    on(`ScoreElementResetTurn`, "", () => {
       if (this.isGameComplete()) {
         this.clearPossibleScores();
         this.setLeftScores();
@@ -1838,7 +1838,7 @@ var App = class {
         this.resetTurn();
       }
     });
-    events.on("AddedView", "", (view) => {
+    signals.on("AddedView", "", (view) => {
       if (view.type === "ScoreButton") {
         this.scoreItems.push(new ScoreElement(view.index, view.name));
       }
@@ -1878,12 +1878,12 @@ var App = class {
   }
   /** resets game state to start a new game */
   resetGame() {
-    events.fire(`HidePopup`, "", null);
+    signals.fire(`HidePopup`, "", null);
     resetGame();
     for (const scoreItem of this.scoreItems) {
       scoreItem.reset();
     }
-    eventBus.fire("UpdatePlayer", "1", {
+    fire("UpdatePlayer", "1", {
       index: 0,
       color: "brown",
       text: ""
@@ -1892,7 +1892,7 @@ var App = class {
     this.fiveOkindBonus = 0;
     this.leftTotal = 0;
     this.rightTotal = 0;
-    events.fire(
+    signals.fire(
       "UpdateText",
       "leftscore",
       {
@@ -1918,7 +1918,7 @@ var App = class {
     state2.text = winMsg[0];
     update2();
     this.updatePlayer(0, "snow", "");
-    events.fire(`UpdateText`, "infolabel", {
+    signals.fire(`UpdateText`, "infolabel", {
       border: false,
       fill: true,
       fillColor: "snow",
@@ -1930,7 +1930,7 @@ var App = class {
       localStorage.setItem("highScore", JSON.stringify(thisPlayer.score));
       winMsg.push("You set a new high score!");
     }
-    events.fire("ShowPopup", "", { title: "Game Over!", msg: winMsg });
+    signals.fire("ShowPopup", "", { title: "Game Over!", msg: winMsg });
   }
   /** check all scoreElements to see if game is complete */
   isGameComplete() {
@@ -1965,7 +1965,7 @@ var App = class {
     }
     if (this.leftTotal > 62) {
       this.addScore(35);
-      events.fire(
+      signals.fire(
         "UpdateText",
         "leftscore",
         {
@@ -1977,7 +1977,7 @@ var App = class {
         }
       );
     } else {
-      events.fire(
+      signals.fire(
         "UpdateText",
         "leftscore",
         {
@@ -1990,7 +1990,7 @@ var App = class {
       );
     }
     if (this.leftTotal === 0) {
-      events.fire(
+      signals.fire(
         "UpdateText",
         "leftscore",
         {
@@ -2459,7 +2459,7 @@ var Die = class {
     this.color = "transparent";
     this.path = this.buildPath(DIE_CFG.radius);
     this.render();
-    eventBus.on("UpdateDie", this.index.toString(), (data) => {
+    on("UpdateDie", this.index.toString(), (data) => {
       this.frozen = data.frozen;
       this.value = data.value;
       this.render();
@@ -2472,7 +2472,7 @@ var Die = class {
   }
   /** called from Surface/canvasEvents when this element has been touched */
   touched() {
-    eventBus.fire(`DieTouched`, "", { index: this.index });
+    fire(`DieTouched`, "", { index: this.index });
   }
   update() {
     this.render();
@@ -2548,10 +2548,10 @@ var Popup2 = class {
     this.shownPath = this.buildPath(el.radius || 30);
     this.path = this.hiddenPath;
     this.fontSize = el.fontSize || 8;
-    events.on("ShowPopup", "", (data) => {
+    signals.on("ShowPopup", "", (data) => {
       this.show(data);
     });
-    events.on("HidePopup", "", () => this.hide());
+    signals.on("HidePopup", "", () => this.hide());
   }
   /** build a Path2D */
   buildPath(radius) {
@@ -2561,7 +2561,7 @@ var Popup2 = class {
   }
   /** show the virtual Popup view */
   show(data) {
-    events.fire("FocusPopup", " ", this);
+    signals.fire("FocusPopup", " ", this);
     this.title = data.title;
     this.text = data.msg;
     left3 = this.location.left;
@@ -2599,7 +2599,7 @@ var Popup2 = class {
   /** called from Surface/canvasEvents when this element has been touched */
   touched() {
     this.hide();
-    events.fire("PopupReset", "", null);
+    signals.fire("PopupReset", "", null);
   }
   /** update this virtual Popups view (render it) */
   update() {
@@ -2721,7 +2721,7 @@ var ScoreButton = class {
     this.lowerText = this.text.split(" ")[1] || "";
     this.isLeftHanded = el.idx % 2 === 1;
     this.buildPath();
-    eventBus.on(
+    on(
       "UpdateScoreElement",
       this.index.toString(),
       (data) => {
@@ -2815,7 +2815,7 @@ var ScoreButton = class {
   }
   /** called from Surface/canvasEvents when this element has been touched */
   touched() {
-    eventBus.fire("ScoreButtonTouched", this.index.toString(), this.index);
+    fire("ScoreButtonTouched", this.index.toString(), this.index);
   }
   /** 
    * updates and renders the virtual ScoreButton view 
@@ -2875,35 +2875,32 @@ var manifest = {
 var view_manifest_default = manifest;
 
 // src/main.ts
-console.info("manifest", view_manifest_default);
-var eventBus = buildEventBus();
+var diceSignals = buildSignalBroker();
+var { on, fire } = diceSignals;
 initCloseButton("closebutton");
 var AudioContext = globalThis.AudioContext;
 var context2 = new AudioContext();
 init(context2);
-var can = document.getElementById("surface");
+var cannvy = document.getElementById("surface");
 containerInit(
-  can,
+  cannvy,
   cfg,
   view_manifest_default
 );
 App.init();
 hydrateUI();
 var thisPlayer = {
-  id: "0",
+  id: "1",
   idx: 0,
-  playerName: "Nick",
+  playerName: "Score:",
   color: "brown",
   score: 0,
   lastScore: ""
 };
-var id2 = "1";
-var name = "Score:";
-thisPlayer.id = id2;
-thisPlayer.playerName = name;
 appInstance.resetTurn();
 render();
 export {
-  eventBus,
+  fire,
+  on,
   thisPlayer
 };
