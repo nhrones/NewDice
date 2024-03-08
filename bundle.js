@@ -915,6 +915,7 @@ function sanitizeName(name) {
 __name(sanitizeName, "sanitizeName");
 
 // https://raw.githubusercontent.com/nhrones/Surface/main/Framework/src/events/signalBroker.ts
+var signals = buildSignalBroker();
 function buildSignalBroker() {
   const eventHandlers = /* @__PURE__ */ new Map();
   const newSignalBroker = {
@@ -953,7 +954,6 @@ function buildSignalBroker() {
   return newSignalBroker;
 }
 __name(buildSignalBroker, "buildSignalBroker");
-var signals = buildSignalBroker();
 
 // https://raw.githubusercontent.com/nhrones/Surface/main/Framework/src/render/activeNodes.ts
 var activeNodes = /* @__PURE__ */ new Set();
