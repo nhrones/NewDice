@@ -915,8 +915,8 @@ function sanitizeName(name) {
 __name(sanitizeName, "sanitizeName");
 
 // https://raw.githubusercontent.com/nhrones/Surface/main/Framework/src/events/signalBroker.ts
-var signals = buildSignalBroker();
-function buildSignalBroker() {
+var signals = buildSignalAggregator();
+function buildSignalAggregator() {
   const eventHandlers = /* @__PURE__ */ new Map();
   const newSignalBroker = {
     /** 
@@ -936,7 +936,7 @@ function buildSignalBroker() {
       }
     },
     /** 
-     * execute all registered handlers for a named signal
+     * Execute all registered handlers for a typed signal (signalName)
      * @param {key} signalName - signal name - one of `TypedEvents` only!
      * @param {string} id - id of a target element (may be an empty string)
      * @param {TypedEvents[key]} data - data payload, typed for this category of signal
@@ -953,7 +953,7 @@ function buildSignalBroker() {
   };
   return newSignalBroker;
 }
-__name(buildSignalBroker, "buildSignalBroker");
+__name(buildSignalAggregator, "buildSignalAggregator");
 
 // https://raw.githubusercontent.com/nhrones/Surface/main/Framework/src/render/activeNodes.ts
 var activeNodes = /* @__PURE__ */ new Set();
@@ -2875,7 +2875,7 @@ var manifest = {
 var view_manifest_default = manifest;
 
 // src/main.ts
-var diceSignals = buildSignalBroker();
+var diceSignals = buildSignalAggregator();
 var { on, fire } = diceSignals;
 initCloseButton("closebutton");
 var AudioContext = globalThis.AudioContext;
