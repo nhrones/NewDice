@@ -18,8 +18,8 @@ After three rolls, you must select a score item.
 The blue highlighted numbers indicate possible scores that are available to select.
 Have fun!
 ```
-## NOTE: Try it on Deploy
+## NOTE: Try it now!
 
-https://surface-dice.deno.dev/    
+## https://new-dice.surge.sh   
 
 Copyright 2022-2024, Nick D. Hrones, All rights are reserved.
