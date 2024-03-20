@@ -7,7 +7,11 @@ Now, its back on my newly updated Surface framework!
 The framework and app have been bundled using my `Hot` dev-server.
 I didn't minify so the bundle is readable!
 
-Once again -- only two files -- one canvas -- fine-grained reactivity!
+### Once again:
+  - Only two files -- index.html + a vannilla JS bundle
+  - One DOM element
+  - Ultra-fine-grained reactivity!
+  - Zero dependencies -- none - nada
 
 ## Usage:
 ```
